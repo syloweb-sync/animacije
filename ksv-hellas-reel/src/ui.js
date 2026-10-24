@@ -331,3 +331,111 @@ export function vignette(ctx, strength = 0.55) {
 }
 
 export function fill(ctx, color, a) { if (a <= 0) return; ctx.fillStyle = color; ctx.globalAlpha = clamp(a); ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+
+// ------------------------------------------------------------------ VICTORY FILM
+// big green stamp slammed across the objective row of the mission window
+export function drawStamp(ctx, t) {
+  if (t < ev.stamp || t >= ev.wipe2) return;
+  const k = prog(t, ev.stamp, 0.16), sc = 1 + 1.6 * (1 - ease.out(k));
+  const cx = W / 2, cy = 280 + 410; // over the objective bar of drawMission
+  ctx.save();
+  ctx.globalAlpha = clamp(k * 3);
+  ctx.translate(cx, cy); ctx.rotate(-0.13); ctx.scale(sc, sc);
+  const s = 10, w = 640, h = 128;
+  ctx.fillStyle = 'rgba(10,40,12,0.55)'; ctx.fillRect(-w / 2, -h / 2, w, h);
+  ctx.fillStyle = '#3cff5a';
+  for (const [x, y, ww, hh] of [[-w / 2, -h / 2, w, 10], [-w / 2, h / 2 - 10, w, 10], [-w / 2, -h / 2, 10, h], [w / 2 - 10, -h / 2, 10, h]]) ctx.fillRect(x, y, ww, hh);
+  drawBlockText(ctx, TEXT.stamp, 0, -(7 * s) / 2, s, '#55ff55', '#127a24', 1, { light: '#b6ffb6', auto: true });
+  ctx.restore();
+}
+
+// XP orbs: green pixel balls that spiral in from the smoke and orbit the text
+function xpOrbs(ctx, t, t0, cx, cy, n = 14) {
+  for (let i = 0; i < n; i++) {
+    const u = t - t0 - i * 0.05; if (u < 0) continue;
+    const pull = Math.exp(-u * 2.2), ang = i * 2.4 + u * (2.2 + (i % 3) * 0.4);
+    const r = 150 + 260 * pull + 30 * Math.sin(i + u * 3);
+    const x = cx + Math.cos(ang) * r * 1.25, y = cy + 380 * pull + Math.sin(ang) * r * 0.55;
+    const sz = 18 + (i % 4) * 4, pulse = 0.75 + 0.25 * Math.sin(u * 9 + i);
+    ctx.globalAlpha = clamp(u * 4) * pulse;
+    ctx.fillStyle = '#2f7a12'; ctx.fillRect(x - sz / 2 - 3, y - sz / 2 - 3, sz + 6, sz + 6);
+    ctx.fillStyle = '#9cff3a'; ctx.fillRect(x - sz / 2, y - sz / 2, sz, sz);
+    ctx.fillStyle = '#eaffb0'; ctx.fillRect(x - sz / 2 + 3, y - sz / 2 + 3, sz / 3, sz / 3);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// "+3 PUNKTE" bursting out of the smoke, bobbing, then floating away
+export function drawPlusPoints(ctx, t) {
+  const t0 = ev.plus, t1 = ev.standUp + SC.BEAT * 2;
+  if (t < t0 || t > t1 + 0.6) return;
+  const k = ease.back(prog(t, t0, 0.35)), out = prog(t, t1, 0.6);
+  const cx = W / 2, cy = 720 - 260 * k + Math.sin((t - t0) * 4) * 10 - 300 * ease.in(out);
+  ctx.save();
+  ctx.globalAlpha = clamp(prog(t, t0, 0.1) * (1 - out));
+  xpOrbs(ctx, t, t0, cx, cy + 50);
+  ctx.globalAlpha = clamp(prog(t, t0, 0.1) * (1 - out));
+  // each XP ding makes the text pop
+  let pop = 0; for (const d of ev.dings) if (t >= d) pop = Math.max(pop, 1 - prog(t, d, 0.18));
+  const s = Math.round(12 * (0.6 + 0.4 * k) * (1 + 0.12 * pop));
+  drawBlockText(ctx, TEXT.plus, cx, cy - (7 * s) / 2, s, '#ffd02a', '#9a5a08', 1, { light: '#fff0a0', auto: true });
+  ctx.restore();
+}
+
+// club-colour pixel confetti, deterministic
+function confetti(ctx, t, t0) {
+  const cols = ['#1550b8', '#ffffff', '#ffd02a', '#d0162a'];
+  for (let i = 0; i < 90; i++) {
+    const h1 = ((i * 92821) % 997) / 997, h2 = ((i * 68917) % 991) / 991, u = t - t0 - h2 * 1.2;
+    if (u < 0) continue;
+    const x = (h1 * W + Math.sin(u * 2 + i) * 40 + W) % W, y = -40 + ((u * (260 + h2 * 220)) % (H + 80));
+    const sz = 12 + (i % 3) * 6;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(u * (2 + h1 * 3)); ctx.fillStyle = cols[i % 4]; ctx.fillRect(-sz / 2, -sz / 4, sz, sz / 2); ctx.restore();
+  }
+}
+
+export function drawVictory(ctx, t, crests) {
+  const F = ev.fin;
+  if (t < F.sieg) return;
+  confetti(ctx, t, F.sieg);
+  // SIEG!
+  { const k = prog(t, F.sieg, 0.22), s = Math.round(20 * (1 + 0.9 * (1 - ease.back(k))));
+    ctx.save(); ctx.globalAlpha = clamp(k * 4);
+    drawBlockText(ctx, TEXT.sieg, W / 2, 330 - (7 * s - 140) / 2, s, '#ffc928', '#a35f0c', 2, { light: '#ffe68a', auto: true });
+    ctx.restore(); }
+  // crests
+  const crest = (img, cx, t0) => {
+    if (t < t0) return;
+    const k = prog(t, t0, 0.22), sc = 1 + 0.4 * (1 - ease.back(k)), ch = 300, cw = ch * img.width / img.height, cy = 740;
+    ctx.save(); ctx.globalAlpha = clamp(k * 4);
+    ctx.translate(cx, cy); ctx.scale(sc, sc);
+    ctx.shadowColor = 'rgba(255,255,255,0.45)'; ctx.shadowBlur = 26;
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, -cw / 2, -ch / 2, cw, ch);
+    ctx.restore();
+  };
+  crest(crests.ksv, 300, F.ksv);
+  crest(crests.opp, W - 300, F.opp);
+  // +3 PUNKTE
+  if (t >= F.plus) {
+    const k = prog(t, F.plus, 0.2), s = Math.round(11 * (1 + 0.8 * (1 - ease.out(k))));
+    ctx.save(); ctx.globalAlpha = clamp(k * 4);
+    drawBlockText(ctx, TEXT.plus, W / 2, 985 - (7 * s - 77) / 2, s, '#ffd02a', '#9a5a08', 1, { light: '#fff0a0', auto: true });
+    ctx.restore();
+  }
+  // match + thanks
+  if (t >= F.line1) {
+    const k = ease.out(prog(t, F.line1, 0.25));
+    const px = 70, pw = W - 140, py = 1150 + 40 * (1 - k), ph = 270;
+    ctx.save(); ctx.globalAlpha = k;
+    darkPanel(ctx, px, py, pw, ph);
+    const fit = (str, s0) => { let s = s0; while (measure(str) * s > pw - 90 && s > 2) s -= 0.5; return s; };
+    drawText(ctx, TEXT.match, W / 2, py + 52, fit(TEXT.match, 7), '#ffffff', { align: 'center' });
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(px + 60, py + 132, pw - 120, 5);
+    if (t >= F.line2) {
+      ctx.globalAlpha = k * ease.out(prog(t, F.line2, 0.2));
+      drawText(ctx, TEXT.thanks, W / 2, py + 170, fit(TEXT.thanks, 6), '#bcd3ff', { align: 'center' });
+    }
+    ctx.restore();
+  }
+}

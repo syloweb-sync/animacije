@@ -3,18 +3,21 @@
 //   node render.js --preview       key frames -> out/pregled.png (contact sheet) + out/preview/*.png
 //   node render.js --still 12.5    one frame  -> out/still-12.50.png
 //   options: --workers 2  --from 0 --to 15  --resume (keep frames already rendered)
+//            --film win   render the victory film (index-win.html + score-win.js) instead of the announcement
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { spawnSync } = require('child_process');
 const { chromium } = require('playwright');
-const SCORE = require('./score');
 
 const ROOT = __dirname;
 const OUT = path.join(ROOT, 'out');
 const args = process.argv.slice(2);
 const opt = (name, def) => { const i = args.indexOf('--' + name); return i < 0 ? def : (args[i + 1] && !args[i + 1].startsWith('--') ? args[i + 1] : true); };
+const FILM = opt('film') ? `-${opt('film')}` : '';           // '' = announcement, '-win' = victory film
+const SCORE = require(`./score${FILM}`);
+const PAGE = `index${FILM}.html`;
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.png': 'image/png', '.json': 'application/json' };
 function serve() {
@@ -34,7 +37,7 @@ async function openWorkers(n, port) {
     const page = await browser.newPage({ viewport: { width: SCORE.W, height: SCORE.H }, deviceScaleFactor: 1 });
     page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') console.log(`[w${i}] ${m.text()}`); });
     page.on('pageerror', (e) => console.log(`[w${i}] ${e.message}`));
-    await page.goto(`http://127.0.0.1:${port}/index.html${opt('noui') ? '?noui' : ''}`);
+    await page.goto(`http://127.0.0.1:${port}/${PAGE}${opt('noui') ? '?noui' : ''}`);
     await page.waitForFunction(() => window.READY === true, null, { timeout: 120000 });
     pages.push(page);
   }
@@ -55,7 +58,7 @@ async function main() {
   if (opt('still')) {
     const t = parseFloat(opt('still'));
     const { browser, pages } = await openWorkers(1, port);
-    const f = path.join(OUT, `still-${t.toFixed(2)}.png`);
+    const f = path.join(OUT, `still${FILM}-${t.toFixed(2)}.png`);
     fs.writeFileSync(f, await grab(pages[0], t));
     console.log('wrote', path.relative(ROOT, f));
     await browser.close(); server.close(); return;
@@ -89,7 +92,7 @@ async function main() {
   const to = Math.round(parseFloat(opt('to', SCORE.DURATION)) * fps);
   // all pages share one software-GPU process, so more than 2 workers only thrash it
   const workers = parseInt(opt('workers', Math.min(2, os.cpus().length)), 10);
-  const dir = path.join(OUT, 'frames');
+  const dir = path.join(OUT, FILM ? `frames${FILM}` : 'frames');
   if (!opt('resume')) fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
   const frameFile = (f) => path.join(dir, `f${String(f).padStart(4, '0')}.png`);
@@ -105,7 +108,7 @@ async function main() {
   }));
   await browser.close(); server.close();
 
-  const music = path.join(OUT, 'music.wav');
+  const music = path.join(OUT, SCORE.MUSIC || 'music.wav');
   const mp4 = path.join(OUT, `${SCORE.NAME}.mp4`);
   const ff = ['-v', 'error', '-y', '-framerate', String(fps), '-start_number', String(from), '-i', path.join(dir, 'f%04d.png')];
   if (fs.existsSync(music)) ff.push('-ss', String(from / fps), '-i', music, '-c:a', 'aac', '-b:a', '192k', '-shortest');

@@ -144,16 +144,20 @@ const BOLD = {
   V: ['##...##', '##...##', '##...##', '##...##', '##...##', '.##.##.', '.##.##.', '..###..', '...#...'],
   S: ['.#####.', '##...##', '##.....', '##.....', '.#####.', '.....##', '.....##', '##...##', '.#####.'],
 };
-export function drawBlockText(ctx, str, cx, y, s, face, side, depth = 3, { outline = '#1a0f00', light } = {}) {
-  const gl = (c) => (BOLD[c] ? { top: 0, rows: BOLD[c] } : glyph(c));
-  let w = -2; for (const c of str) w += gl(c).rows[0].length + 2;
-  const h = Math.max(...[...str].map((c) => gl(c).rows.length)), pad = 1, cw = w + depth + pad * 2, ch = h + depth + pad * 2;
+// auto: every glyph is the regular 5x7 one thickened by a pixel (any text, accents included);
+// otherwise the hand-drawn BOLD capitals are used where they exist (the big VS)
+export function drawBlockText(ctx, str, cx, y, s, face, side, depth = 3, { outline = '#1a0f00', light, auto = false } = {}) {
+  const thick = (g) => ({ top: g.top, rows: g.rows.map((r) => [...r + '.'].map((c, i) => (c === '#' || (i > 0 && r[i - 1] === '#') ? '#' : '.')).join('')) });
+  const gl = (c) => (auto ? thick(glyph(c)) : BOLD[c] ? { top: 0, rows: BOLD[c] } : glyph(c));
+  const gs = [...str].map(gl), gap = 2;
+  const top = Math.min(0, ...gs.map((g) => g.top)), bottom = Math.max(...gs.map((g) => g.top + g.rows.length));
+  const w = gs.reduce((a, g) => a + g.rows[0].length + gap, -gap), h = bottom - top;
+  const pad = 1, cw = w + depth + pad * 2, ch = h + depth + pad * 2;
   const grid = new Uint8Array(w * h);
   let gx = 0;
-  for (const c of str) {
-    const g = gl(c);
-    for (let r = 0; r < Math.min(h, g.rows.length); r++) for (let k = 0; k < g.rows[r].length; k++) if (g.rows[r][k] === '#') grid[r * w + gx + k] = 1;
-    gx += g.rows[0].length + 2;
+  for (const g of gs) {
+    for (let r = 0; r < g.rows.length; r++) for (let k = 0; k < g.rows[r].length; k++) if (g.rows[r][k] === '#') grid[(r + g.top - top) * w + gx + k] = 1;
+    gx += g.rows[0].length + gap;
   }
   const L = new Uint8Array(cw * ch); // 0 empty, 1 outline, 2 side, 3 face
   for (let d = depth; d >= 0; d--) for (let r = 0; r < h; r++) for (let c = 0; c < w; c++) if (grid[r * w + c]) L[(r + pad + d) * cw + c + pad + d] = d ? 2 : 3;
@@ -162,11 +166,13 @@ export function drawBlockText(ctx, str, cx, y, s, face, side, depth = 3, { outli
     if (filled[r * cw + c]) continue;
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const rr = r + dy, cc = c + dx; if (rr >= 0 && cc >= 0 && rr < ch && cc < cw && filled[rr * cw + cc]) { L[r * cw + c] = 1; break; } }
   }
-  const x0 = Math.round(cx - (w + pad * 2) * s / 2), y0 = Math.round(y - pad * s);
+  // y is the cap line of regular letters; accents above it reach into the padding
+  const x0 = Math.round(cx - (w + pad * 2) * s / 2), y0 = Math.round(y - (pad - top) * s);
+  const lightRows = Math.round((h + top) * 0.45) - top;
   for (let r = 0; r < ch; r++) for (let c = 0; c < cw; c++) {
     const v = L[r * cw + c]; if (!v) continue;
-    ctx.fillStyle = v === 1 ? outline : v === 2 ? side : (light && r - pad < 4 ? light : face);
+    ctx.fillStyle = v === 1 ? outline : v === 2 ? side : (light && r - pad < lightRows ? light : face);
     ctx.fillRect(x0 + c * s, y0 + r * s, s, s);
   }
-  return w * s;
+  return (w + pad * 2) * s;
 }

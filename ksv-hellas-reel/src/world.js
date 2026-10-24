@@ -1,7 +1,7 @@
 // WORLD — voxel builders: block grids, blocky players, the voxel ball, crest frames,
 // and the three sets (locker room, dark mission stage, stadium with tunnel).
 import * as THREE from 'three';
-import { B, tex, rng, makeSkin, cv } from './textures.js';
+import { B, tex, rng, makeSkin, cv, paint } from './textures.js';
 
 const BOX = new THREE.BoxGeometry(1, 1, 1);
 const lam = (c, o = {}) => new THREE.MeshLambertMaterial({ map: tex(c), ...o });
@@ -49,7 +49,9 @@ export function makePlayer(spec) {
   const pivot = (x, y, z, mesh) => { const g = new THREE.Group(); g.position.set(x * U, y * U, z * U); g.add(mesh); return g; };
   const root = new THREE.Group(), hips = new THREE.Group(); root.add(hips);
   hips.add(part(8, 12, 4, sk.body, 0, 18, 0));
-  const head = pivot(0, 24, 0, part(8, 8, 8, sk.head, 0, 4, 0));
+  const headMesh = part(8, 8, 8, sk.head, 0, 4, 0), cleanHead = headMesh.material;
+  const head = pivot(0, 24, 0, headMesh);
+  let sootHead = null; // blackened face after an explosion, built on first use
   const armR = pivot(-6, 22, 0, part(4, 12, 4, sk.arm, 0, -4, 0));
   const armL = pivot(6, 22, 0, part(4, 12, 4, sk.arm, 0, -4, 0));
   const legR = pivot(-2, 12, 0, part(4, 12, 4, sk.legR, 0, -6, 0));
@@ -58,14 +60,23 @@ export function makePlayer(spec) {
   const hand = new THREE.Group(); hand.position.set(0, -11 * U, 2.6 * U); armR.add(hand);
   return {
     root, hips, head, armR, armL, legR, legL, hand,
+    // fall: 0 standing .. 1 flat on the back (pivots at the feet); sneak: 0..1 crouch; lean: sideways tilt
     pose(p = {}) {
-      head.rotation.set(p.headPitch || 0, p.headYaw || 0, 0);
+      const fall = p.fall || 0, sneak = p.sneak || 0;
+      head.rotation.set((p.headPitch || 0) - 0.25 * sneak, p.headYaw || 0, 0);
       armR.rotation.set(p.armR || 0, 0, p.armRz || 0);
       armL.rotation.set(p.armL || 0, 0, p.armLz || 0);
-      legR.rotation.set(p.legR || 0, 0, 0);
-      legL.rotation.set(p.legL || 0, 0, 0);
-      hips.position.y = p.bob || 0;
-      hips.rotation.y = p.bodyYaw || 0;
+      legR.rotation.set((p.legR || 0) - 0.45 * sneak, 0, 0);
+      legL.rotation.set((p.legL || 0) - 0.45 * sneak, 0, 0);
+      hips.position.y = (p.bob || 0) - 0.16 * sneak + 0.13 * fall;
+      hips.rotation.set(-fall * Math.PI / 2 + 0.45 * sneak, p.bodyYaw || 0, p.lean || 0);
+    },
+    setSoot(on) {
+      if (on && !sootHead) {
+        const sp = { ...spec, skin: '#3b3431', skinShade: '#2c2624', mouth: '#120e0e', hair: '#1c1714', beard: spec.beard ? '#171210' : undefined, crest: null, sponsor: [], number: '', backText: '' };
+        sootHead = mats(makeSkin(sp).head);
+      }
+      headMesh.material = on ? sootHead : cleanHead;
     },
   };
 }
@@ -78,6 +89,13 @@ export const KITS = {
     shorts: '#ffffff', shortsStripe: '#1550b8', socks: '#1550b8', sockBand: '#ffffff', boots: '#17181d', bootAccent: '#ffffff',
     crest, sponsor: [{ text: 'SF', s: 2, y: 4.5, cube: true }, { text: 'INNENAUSBAU', s: 1, y: 6.6 }],
     backText: 'KSV TRENK', number: '10', numberColor: '#ffffff',
+  }),
+  hellas: (crest) => ({ // FC Hellas: navy, royal side panels, cuffs and collar
+    skin: '#c9906a', skinShade: '#b07a57', hair: '#17110d', beard: '#231912', eyes: '#5a3a1e', mouth: '#7a4232',
+    shirt: '#172b66', sleeve: '#172b66', sidePanel: '#1f5fd6', collar: '#1f5fd6', cuff: '#1f5fd6', shoulderDots: true,
+    shorts: '#172b66', shortsStripe: '#1f5fd6', socks: '#172b66', sockBand: '#1f5fd6', boots: '#17181d', bootAccent: '#e3c770',
+    crest, sponsor: [{ text: 'GYROLAND', s: 1, y: 4.8 }],
+    number: '7', numberColor: '#ffffff',
   }),
   opp: (crest) => ({ // TSV Leitershofen: yellow shirt, black collar and long black undershirt, black shorts, yellow socks
     skin: '#dba27c', skinShade: '#c48c68', hair: '#5a3a22', beard: '#4a2f1c', eyes: '#4a6a3a', mouth: '#8a4f3a',
@@ -140,7 +158,7 @@ function blockMats() {
 }
 
 // ------------------------------------------------------------------ set 1: locker room
-export function buildLocker(crestKsv) {
+export function buildLocker(crestKsv, { door = false } = {}) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0b0d14);
   scene.fog = new THREE.Fog(0x0b0d14, 10, 22);
@@ -155,15 +173,23 @@ export function buildLocker(crestKsv) {
   for (let z = -6; z <= 7; z++) { V.set(-7, 0, z, z % 2 ? 'blue' : 'white'); V.set(6, 0, z, z % 2 ? 'blue' : 'white'); }
   const lampM = glow(B.lamp(), 0xfff1d6);
   V.set(-3, 7, -2, 'lamp'); V.set(2, 7, -2, 'lamp'); V.set(-3, 7, 3, 'lamp'); V.set(2, 7, 3, 'lamp');
+  const DOOR = [2, 3]; // doorway columns in the back wall (victory film)
+  if (door) {
+    for (const x of DOOR) for (let y = 0; y <= 2; y++) V.del(x, y, -6);
+    for (let z = -9; z <= -7; z++) for (let y = 0; y <= 3; y++) { V.set(2, y, z, 'stoneBricks'); V.set(5, y, z, 'stoneBricks'); }
+    for (const x of DOOR) { for (let z = -9; z <= -7; z++) { V.set(x, -1, z, 'planks'); V.set(x, 3, z, 'stoneBricks'); } for (let y = 0; y <= 2; y++) V.set(x, y, -10, 'black'); }
+  }
   scene.add(V.build({ ...M, lamp: lampM }));
 
   // lockers (1 x 2 blocks) along the back wall, alternating club colours
   const lockerFront = { blue: lam(B.locker('#2550c4', 61)), white: lam(B.locker('#e4e7ee', 63)) };
   const side = { blue: new THREE.MeshLambertMaterial({ color: 0x1e3f9c }), white: new THREE.MeshLambertMaterial({ color: 0xc8ccd6 }) };
+  const lockers = [];
   for (let x = -6; x <= 5; x++) {
+    if (door && DOOR.includes(x)) continue;
     const c = x % 2 ? 'blue' : 'white';
     const m = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 0.8), [side[c], side[c], side[c], side[c], lockerFront[c], side[c]]);
-    m.position.set(x + 0.5, 2, -4.6); m.castShadow = m.receiveShadow = true; scene.add(m);
+    m.position.set(x + 0.5, 2, -4.6); m.castShadow = m.receiveShadow = true; scene.add(m); lockers.push(m);
   }
   // shelf + bench
   const spruce = lam(B.planks('#7a5530', 65));
@@ -183,7 +209,7 @@ export function buildLocker(crestKsv) {
   key.castShadow = true; key.shadow.mapSize.set(1024, 1024); key.shadow.bias = -0.0008; scene.add(key, key.target);
   for (const [x, z] of [[-2.5, -1.5], [2.5, -1.5], [-2.5, 3.5], [2.5, 3.5]]) { const p = new THREE.PointLight(0xffe2b8, 12, 14, 2); p.position.set(x, 6.4, z); scene.add(p); }
   const rim = new THREE.SpotLight(0x7fa6ff, 30, 20, 0.7, 0.8, 2); rim.position.set(-3, 4, -2.8); rim.target.position.set(0, 1.4, -1); scene.add(rim, rim.target);
-  return { scene, crestFrame: fr };
+  return { scene, crestFrame: fr, lockers, doorX: DOOR[0] + 1 };
 }
 
 // ------------------------------------------------------------------ set 2: dark mission stage
@@ -345,4 +371,93 @@ export function buildStadium(crestOpp) {
 
   const dust = makeParticles(500, 60, 22, 0xfff3d8, 93, 0.12); scene.add(dust);
   return { scene, banks, bankMeshes, tunnelLampMat, towers, key, tunnelSpot, crestSpot, crestFrame: fr, hemi, dust, zf };
+}
+
+// ------------------------------------------------------------------ victory film props
+// TNT block (own design): red sides, white band with pixel "TNT", grey top with a fuse; flashes white when lit
+export function makeTNT() {
+  const T = ['###', '.#.', '.#.', '.#.', '.#.'], Nn = ['#..#', '##.#', '#.##', '#..#', '#..#'];
+  const side = paint(16, 16, (x, y, R) => {
+    const n = 1 + (R() - 0.5) * 0.12;
+    if (y >= 5 && y <= 10) {
+      const gx = x - 2, gy = y - 6, letters = [[T, 0], [Nn, 4], [T, 9]];
+      for (const [g, ox] of letters) { const c = g[gy]?.[gx - ox]; if (gy >= 0 && gy < 5 && c === '#') return [24, 24, 24]; }
+      return [232 * n, 232 * n, 228 * n];
+    }
+    const stripe = (x + (y < 5 ? 0 : 2)) % 4 === 0;
+    return [(stripe ? 170 : 205) * n, 40 * n, 30 * n];
+  }, 101);
+  const top = paint(16, 16, (x, y, R) => {
+    const n = 1 + (R() - 0.5) * 0.15, d = Math.hypot(x - 7.5, y - 7.5);
+    return d < 2 ? [40, 40, 40] : [150 * n, 150 * n, 155 * n];
+  }, 103);
+  const mk = (c) => new THREE.MeshLambertMaterial({ map: tex(c), emissive: 0xffffff, emissiveIntensity: 0 });
+  const sideM = mk(side), topM = mk(top), botM = mk(top);
+  const g = new THREE.Group();
+  const box = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), [sideM, sideM, topM, botM, sideM, sideM]);
+  box.position.y = 0.5; box.castShadow = box.receiveShadow = true; g.add(box);
+  const fuse = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.22, 0.07), new THREE.MeshLambertMaterial({ color: 0x2a2a2a }));
+  fuse.position.y = 1.1; g.add(fuse);
+  const spark = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1), new THREE.MeshBasicMaterial({ color: 0xffd25a, toneMapped: false }));
+  spark.position.y = 1.24; spark.visible = false; g.add(spark);
+  return { group: g, box, fuse, spark, mats: [sideM, topM, botM] };
+}
+
+// smoke burst: grey cubes flung outwards, slowing, rising and shrinking away (pure function of age)
+export function makeSmoke(n = 70, seed = 111) {
+  const R = rng(seed), parts = [];
+  for (let i = 0; i < n; i++) {
+    const a = R() * Math.PI * 2, e = R() * 1.2, sp = 1.2 + R() * 2.4;
+    parts.push({ d: [Math.cos(a) * Math.cos(e) * sp, Math.sin(e) * sp * 0.8 + 0.4, Math.sin(a) * Math.cos(e) * sp], s: 0.14 + R() * 0.3, life: 0.8 + R() * 1.2, shade: R() });
+  }
+  const geo = new THREE.BoxGeometry(1, 1, 1);
+  const mesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: 0xffffff }), n);
+  const c = new THREE.Color();
+  parts.forEach((p, i) => mesh.setColorAt(i, c.setScalar(0.12 + p.shade * 0.22)));
+  mesh.frustumCulled = false;
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), v = new THREE.Vector3(), sc = new THREE.Vector3();
+  return {
+    mesh,
+    update(age, origin) {
+      parts.forEach((p, i) => {
+        const k = 1 - Math.exp(-Math.max(0, age) * 3.2), live = age < 0 ? 0 : Math.max(0, 1 - age / p.life);
+        const size = p.s * Math.min(1, age / 0.08) * (0.4 + 0.6 * live) * (age > 0 ? 1 : 0) * (live > 0 ? 1 : 0);
+        v.set(origin.x + p.d[0] * k, origin.y + p.d[1] * k + age * 0.35, origin.z + p.d[2] * k);
+        q.setFromEuler(new THREE.Euler(age * 2 + i, age * 1.5 + i * 0.7, 0));
+        mesh.setMatrixAt(i, m4.compose(v, q, sc.setScalar(Math.max(0.0001, size))));
+      });
+      mesh.instanceMatrix.needsUpdate = true;
+    },
+  };
+}
+
+// little rain cloud with falling drops (for the gentle FC Hellas gag)
+export function makeRainCloud(seed = 121) {
+  const g = new THREE.Group(), R = rng(seed), m4 = new THREE.Matrix4();
+  const puffs = [[0, 0, 0, 0.5], [0.38, 0.06, 0.05, 0.42], [-0.36, 0.04, -0.04, 0.4], [0.12, 0.22, 0, 0.36], [-0.15, 0.2, 0.1, 0.32]];
+  const cloud = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: 0x9aa3b2 }), puffs.length);
+  puffs.forEach((p, i) => cloud.setMatrixAt(i, m4.compose(new THREE.Vector3(p[0], p[1], p[2]), new THREE.Quaternion(), new THREE.Vector3(p[3], p[3] * 0.7, p[3]))));
+  g.add(cloud);
+  const drops = [];
+  for (let i = 0; i < 14; i++) drops.push([(R() - 0.5) * 0.8, R(), (R() - 0.5) * 0.4]);
+  const dm = new THREE.InstancedMesh(new THREE.BoxGeometry(0.03, 0.12, 0.03), new THREE.MeshBasicMaterial({ color: 0x6fa8ff }), drops.length);
+  dm.frustumCulled = false; g.add(dm);
+  return {
+    group: g,
+    update(t) {
+      drops.forEach((d, i) => { const y = -0.2 - ((d[1] + t * 1.6) % 1) * 1.1; dm.setMatrixAt(i, m4.makeTranslation(d[0], y, d[2])); });
+      dm.instanceMatrix.needsUpdate = true;
+    },
+  };
+}
+
+// torch: wooden stick with a glowing flame block and a small light
+export function makeTorch() {
+  const g = new THREE.Group();
+  const stick = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.42, 0.07), new THREE.MeshLambertMaterial({ color: 0x7a5530 }));
+  stick.position.y = 0.16; g.add(stick);
+  const flame = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.13, 0.11), new THREE.MeshBasicMaterial({ color: 0xffc23a, toneMapped: false }));
+  flame.position.y = 0.42; g.add(flame);
+  const light = new THREE.PointLight(0xffb040, 3, 4, 2); light.position.y = 0.45; g.add(light);
+  return { group: g, flame, light };
 }

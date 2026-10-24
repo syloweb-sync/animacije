@@ -18,7 +18,23 @@ Dresovi su izrađeni prema stvarnim dresovima klubova. Sponzori (SF Innenausbau,
 ## Gotov video
 - `video/ksv-leitershofen-reel.mp4`: aktualni Reel (H.264 + AAC, 1080×1920, 20 s, −14 LUFS)
 - `video/ksv-hellas-reel.mp4`: prethodna najava (KSV Trenk - FC Hellas, hrvatski)
-- `video/naslovnica-leitershofen.png` / `video/naslovnica-hellas.png`: naslovnice (završni kadar)
+- `video/ksv-sieg-3-punkte.mp4`: video pobjede (KSV Trenk - FC Hellas)
+- `video/naslovnica-*.png`: naslovnice (završni kadar)
+
+## Drugi video: pobjeda „3 PUNKTE” (KSV Trenk - FC Hellas)
+Kratki smiješni Reel (~19 s, 100 BPM, njemački) za objavu nakon pobjede:
+- prozor misije dobije pečat **ERFÜLLT!**;
+- u svlačionici igrači pale TNT, svi popadaju čađavih lica, a iz dima izleti **+3 PUNKTE** s XP kuglicama;
+- slijedi čučanj-ples, a igrač FC Hellasa s kišnim oblačićem proviri na vrata, slegne ramenima i zapljeska (fair play);
+- na kraju dolazi kartica **SIEG!**.
+
+Datoteke: `score-win.js`, `song-win.js`, `index-win.html`, `src/film-win.js` (koristi isti svijet, likove i UI).
+
+```bash
+node song-win.js                       # -> out/music-win.wav
+node render.js --film win --preview    # kontakt-list
+node render.js --film win              # -> out/ksv-sieg-3-punkte.mp4
+```
 
 ## Pokretanje
 Potrebno: Node 22+, ffmpeg, Playwright s Chromiumom.
