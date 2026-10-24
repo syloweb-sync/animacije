@@ -1,0 +1,13 @@
+{
+  "name": "ksv-hellas-reel",
+  "private": true,
+  "description": "KSV Trenk - FC Hellas: 3D voxel najava utakmice (Instagram Reel 9:16)",
+  "scripts": {
+    "music": "node song.js",
+    "preview": "node render.js --preview",
+    "render": "node song.js && node render.js"
+  },
+  "dependencies": {
+    "three": "0.170.0"
+  }
+}
