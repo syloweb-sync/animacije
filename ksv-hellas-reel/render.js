@@ -2,7 +2,7 @@
 //   node render.js                 full render -> out/ksv-hellas-reel.mp4 (needs out/music.wav from song.js)
 //   node render.js --preview       key frames -> out/pregled.png (contact sheet) + out/preview/*.png
 //   node render.js --still 12.5    one frame  -> out/still-12.50.png
-//   options: --workers 4  --from 0 --to 15
+//   options: --workers 2  --from 0 --to 15  --resume (keep frames already rendered)
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -87,15 +87,19 @@ async function main() {
   const fps = SCORE.FPS;
   const from = Math.round(parseFloat(opt('from', 0)) * fps);
   const to = Math.round(parseFloat(opt('to', SCORE.DURATION)) * fps);
-  const workers = parseInt(opt('workers', Math.max(1, os.cpus().length)), 10);
+  // all pages share one software-GPU process, so more than 2 workers only thrash it
+  const workers = parseInt(opt('workers', Math.min(2, os.cpus().length)), 10);
   const dir = path.join(OUT, 'frames');
-  fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir, { recursive: true });
+  if (!opt('resume')) fs.rmSync(dir, { recursive: true, force: true });
+  fs.mkdirSync(dir, { recursive: true });
+  const frameFile = (f) => path.join(dir, `f${String(f).padStart(4, '0')}.png`);
   const { browser, pages } = await openWorkers(workers, port);
   let next = from, done = 0;
   await Promise.all(pages.map(async (page) => {
     while (next < to) {
       const f = next++;
-      fs.writeFileSync(path.join(dir, `f${String(f).padStart(4, '0')}.png`), await grab(page, (f + 0.5) / fps));
+      if (opt('resume') && fs.existsSync(frameFile(f))) { done++; continue; }
+      fs.writeFileSync(frameFile(f), await grab(page, (f + 0.5) / fps));
       if (++done % 30 === 0) process.stdout.write(`  ${done}/${to - from} frames, ${((Date.now() - t0) / 1000).toFixed(0)}s\n`);
     }
   }));

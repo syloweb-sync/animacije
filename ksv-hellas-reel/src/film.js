@@ -22,7 +22,8 @@ renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadow
 document.body.appendChild(renderer.domElement);
 
 const camera = new THREE.PerspectiveCamera(50, W / H, 0.1, 900);
-const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(W, H, { type: THREE.HalfFloatType, samples: 4 }));
+const SAMPLES = parseInt(new URLSearchParams(location.search).get('samples') ?? '4', 10);
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(W, H, { type: THREE.HalfFloatType, samples: SAMPLES }));
 const renderPass = new RenderPass(new THREE.Scene(), camera);
 const bloom = new UnrealBloomPass(new THREE.Vector2(W / 2, H / 2), 0.6, 0.45, 0.85);
 composer.addPass(renderPass); composer.addPass(bloom); composer.addPass(new OutputPass());
