@@ -79,12 +79,12 @@ export const KITS = {
     crest, sponsor: [{ text: 'SF', s: 2, y: 4.5, cube: true }, { text: 'INNENAUSBAU', s: 1, y: 6.6 }],
     backText: 'KSV TRENK', number: '10', numberColor: '#ffffff',
   }),
-  hellas: (crest) => ({
-    skin: '#c9906a', skinShade: '#b07a57', hair: '#17110d', beard: '#231912', eyes: '#5a3a1e', mouth: '#7a4232',
-    shirt: '#172b66', sleeve: '#172b66', sidePanel: '#1f5fd6', collar: '#1f5fd6', cuff: '#1f5fd6', shoulderDots: true,
-    shorts: '#172b66', shortsStripe: '#1f5fd6', socks: '#172b66', sockBand: '#1f5fd6', boots: '#17181d', bootAccent: '#e3c770',
-    crest, sponsor: [{ text: 'GYROLAND', s: 1, y: 4.8 }],
-    number: '7', numberColor: '#ffffff',
+  opp: (crest) => ({ // TSV Leitershofen: yellow shirt, black collar and long black undershirt, black shorts, yellow socks
+    skin: '#dba27c', skinShade: '#c48c68', hair: '#5a3a22', beard: '#4a2f1c', eyes: '#4a6a3a', mouth: '#8a4f3a',
+    shirt: '#f2d21b', sleeve: '#f2d21b', collar: '#141414', cuff: '#f2d21b', underSleeve: '#161616',
+    shorts: '#141414', shortsStripe: '#f2d21b', socks: '#f2d21b', sockBand: '#141414', boots: '#17181d', bootAccent: '#38b6b0',
+    crest, sponsor: [{ text: 'EL', s: 2, y: 4.1, color: '#111111' }, { text: 'ERHARDT+', s: 1, y: 6.2, color: '#111111' }, { text: 'LEIMER', s: 1, y: 7.3, color: '#111111' }],
+    number: '24', numberColor: '#111111', numberShadow: 'rgba(0,0,0,0.15)',
   }),
 };
 
@@ -230,7 +230,7 @@ export function driftParticles(pts, t, speed = 0.25) {
 
 // ------------------------------------------------------------------ set 3: stadium with the players' tunnel
 export const STAD = { L: 32, Wd: 20, tunnelZ: -25, crestY: 6.6 };
-export function buildStadium(crestHellas) {
+export function buildStadium(crestOpp) {
   const scene = new THREE.Scene();
   const M = blockMats(), V = new Voxels();
   const { L, Wd } = STAD;
@@ -327,7 +327,7 @@ export function buildStadium(crestHellas) {
   const tunnelSpot = new THREE.SpotLight(0xffe6c0, 0, 0, 0.7, 0.6, 2); tunnelSpot.position.set(0, 5.5, zf + 3); tunnelSpot.target.position.set(0, 0, zf - 2); scene.add(tunnelSpot, tunnelSpot.target);
 
   // opponent crest framed above the tunnel
-  const fr = crestFrame(crestHellas, 4.0); fr.group.position.set(0, STAD.crestY, zf + 1.3); scene.add(fr.group);
+  const fr = crestFrame(crestOpp, 4.0); fr.group.position.set(0, STAD.crestY, zf + 1.3); scene.add(fr.group);
   const crestSpot = new THREE.SpotLight(0xffffff, 0, 0, 0.35, 0.5, 2); crestSpot.position.set(0, 2, zf + 14); crestSpot.target.position.set(0, STAD.crestY, zf); scene.add(crestSpot, crestSpot.target);
 
   // sky: gradient, square stars, square moon

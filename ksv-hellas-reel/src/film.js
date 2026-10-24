@@ -33,18 +33,18 @@ const ctx = out.getContext('2d');
 const blurCv = document.createElement('canvas'); blurCv.width = W / 2; blurCv.height = H / 2;
 
 // ------------------------------------------------------------------ assets + sets
-const [ksvImg, helImg] = await Promise.all([loadImage('assets/grb-ksv-trenk.png'), loadImage('assets/grb-fc-hellas.png')]);
+const [ksvImg, oppImg] = await Promise.all([loadImage('assets/grb-ksv-trenk.png'), loadImage('assets/grb-tsv-leitershofen.png')]);
 const ksv = crop(ksvImg, 0, 0, ksvImg.width, ksvImg.height); // supplied crests, trimmed to content (no edits)
-const hellas = crop(helImg, 112, 0, 576, 800);
+const opp = crop(oppImg, 0, 0, oppImg.width, oppImg.height);
 const icons = { lopta: upscale(iconBall()), kopacke: upscale(iconBoots()), boca: upscale(iconBottle()), dres: upscale(iconJersey(ksv)) };
 UI.setWipeTile(upscale(B.deepslate(), 6));
 
-const LK = buildLocker(ksv), DK = buildDark(), ST = buildStadium(hellas);
+const LK = buildLocker(ksv), DK = buildDark(), ST = buildStadium(opp);
 const pK = makePlayer(KITS.ksv(ksv)); pK.root.position.set(0, 0, -1.2); LK.scene.add(pK.root);
 const ballK = makeBall(); pK.hand.add(ballK); ballK.position.set(0, -0.02, 0.12);
 const pD = makePlayer(KITS.ksv(ksv)); DK.scene.add(pD.root);
 const ballD = makeBall(); DK.scene.add(ballD);
-const pH = makePlayer(KITS.hellas(hellas)); ST.scene.add(pH.root);
+const pH = makePlayer(KITS.opp(opp)); ST.scene.add(pH.root);
 
 // inventory preview: its own little scene, rendered into the black box of the GUI
 const PV = { scene: new THREE.Scene(), cam: new THREE.PerspectiveCamera(19, 240 / 350, 0.1, 50), player: makePlayer(KITS.ksv(ksv)) };
@@ -227,8 +227,8 @@ window.renderAt = (t) => {
   UI.vignette(ctx, t >= ev.wipe1 && t < ev.wipe2 ? 0.75 : 0.5);
   if (t < S.intro[1]) UI.drawTitle(ctx, t);
   if (t < ev.wipe1) UI.drawInventory(ctx, t, icons, drawPreview(t));
-  UI.drawMission(ctx, t, icons, { hellas });
-  if (t >= ev.flash) UI.drawFinal(ctx, t, { ksv, hellas });
+  UI.drawMission(ctx, t, icons, { opp });
+  if (t >= ev.flash) UI.drawFinal(ctx, t, { ksv, opp });
 
   // transitions
   UI.blockWipe(ctx, t, ev.wipe1);

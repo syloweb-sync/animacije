@@ -94,9 +94,10 @@ const blips = (t0, text, seed) => {
   const scale = notes('D6 F6 G6 A6 C7');
   [...text].forEach((ch, i) => { if (ch !== ' ') fx.addMono(I.pulse(scale[(i * 7 + seed) % 5], 0.025, { duty: 0.5, decay: 0.015 }), t0 + i * 0.03, 0.12); });
 };
-blips(ev.missionTitle, SC.TEXT.mission[0], 1);
-blips(ev.missionOpp, SC.TEXT.mission[1], 2);
-blips(ev.missionGoal, SC.TEXT.mission[2], 3);
+const MT = SC.TEXT.mission;
+blips(ev.missionTitle, MT.title, 1);
+blips(ev.missionOpp, MT.oppLabel + ' ' + MT.opp, 2);
+blips(ev.missionGoal, MT.goal, 3);
 fx.addMono(I.thud(90, 0.12, 63), ev.missionOpp, 0.35);
 // mission accepted: a bright major arpeggio + bell
 notes('D5 F#5 A5 D6 F#6').forEach((n, i) => {
@@ -137,12 +138,12 @@ const F = ev.fin;
 drums.addMono(I.crash(19), F.ksv, 0.5, -0.2);
 fx.addMono(I.subBoom(2.4), F.ksv, 0.75);
 fx.addMono(I.thud(55, 0.2), F.ksv, 0.6);
-fx.addMono(I.thud(70, 0.16, 91), F.hellas, 0.55);
+fx.addMono(I.thud(70, 0.16, 91), F.opp, 0.55);
 drums.addMono(I.timpani(m('D2')), F.vs, 0.8);
 drums.addMono(I.thwack(), F.vs, 0.45);
 drums.addMono(I.crash(20), F.vs, 0.3, 0.25);
 for (const n of notes('D3 A3 D4 F#4 A4')) { const x = I.brassNote(n, 0.45, { stab: true }); stereo(brass, x, F.ksv, 0.2); stereo(brass, x, F.vs, 0.2); stereo(verb, x, F.vs, 0.1); }
-[F.line1, F.line2, F.line3].forEach((t, i) => { const x = I.pluck(notes('D6 F#6 A6')[i], { decay: 0.25, cutoff: 6000 }); keys.addMono(x, t, 0.3); dly.addMono(x, t, 0.1); fx.addMono(I.pop(1800 + i * 300, 95 + i), t, 0.18); });
+[F.line1, F.line2, F.line3, F.line4].forEach((t, i) => { const x = I.pluck(notes('D6 F#6 A6 D7')[i], { decay: 0.25, cutoff: 6000 }); keys.addMono(x, t, 0.3); dly.addMono(x, t, 0.1); fx.addMono(I.pop(1800 + i * 300, 95 + i), t, 0.18); });
 const kicks = [];
 beats(24, 28, 1, (t) => { drums.addMono(I.kick(), t, 0.85); kicks.push(t); });
 beats(25, 28, 2, (t) => { drums.addMono(I.clap(), t, 0.45); drums.addMono(I.snare(), t, 0.2); verb.addMono(I.clap(), t, 0.2); });

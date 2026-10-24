@@ -277,6 +277,7 @@ export function makeSkin(sp) {
     if (y <= 2) return raglan(x, y);
     if (y === 3) return hex(sp.cuff);
     if (y >= 10) return mul(hex(sp.skin), 0.93);
+    if (sp.underSleeve) return jitter(sp.underSleeve, x, y, 0.08); // long undershirt sleeve
     return skin(x, y);
   });
   const arm = { px: armFace, nx: armFace, pz: armFace, nz: armFace, py: face(4, 4, (x, y) => (sp.shoulderDots && x === 1 && y === 2 ? [235, 238, 245] : raglan(x, y))), ny: face(4, 4, skin) };

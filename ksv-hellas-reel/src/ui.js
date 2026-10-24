@@ -165,15 +165,15 @@ function darkPanel(ctx, x, y, w, h, s = 5) {
 export function drawMission(ctx, t, icons, crests) {
   if (t < ev.missionOpen || t >= ev.wipe2) return;
   const a = ease.back(prog(t, ev.missionOpen, 0.22));
-  const pw = 880, ph = 590, px = (W - pw) / 2, py = 290;
+  const pw = 880, ph = 620, px = (W - pw) / 2, py = 280;
   const typed = (str, t0) => str.slice(0, Math.min(str.length, Math.floor((t - t0) / 0.03) + 1));
   ctx.save();
   ctx.globalAlpha = clamp(prog(t, ev.missionOpen, 0.12));
   ctx.translate(W / 2, py + ph / 2); ctx.scale(0.85 + 0.15 * a, 0.85 + 0.15 * a); ctx.translate(-W / 2, -(py + ph / 2));
   darkPanel(ctx, px, py, pw, ph);
 
-  // title: ball icon + NOVA MISIJA (typed in)
-  const title = TEXT.mission[0];
+  // title: ball icon + mission title (typed in)
+  const M = TEXT.mission, title = M.title;
   const ts = 9, tw = measure(title) * ts, iconS = 84, gap = 26;
   const tx = W / 2 - (tw + iconS + gap) / 2;
   if (t >= ev.missionTitle) {
@@ -185,36 +185,39 @@ export function drawMission(ctx, t, icons, crests) {
   ctx.fillStyle = '#2c3043';
   for (let x = px + 40; x < px + pw - 40; x += 20) ctx.fillRect(x, py + 165, 10, 5);
 
-  // opponent: crest + PROTIVNIK: FC HELLAS
+  // opponent: crest + "GEGNER:" over the club name
   if (t >= ev.missionOpp) {
-    const k = ease.out(prog(t, ev.missionOpp, 0.2));
-    const opp = TEXT.mission[1], cut = opp.indexOf(':') + 1, s = 6;
-    const ch = 92, cw = ch * crests.hellas.width / crests.hellas.height;
-    const total = cw + 24 + measure(opp) * s, x0 = W / 2 - total / 2, y0 = py + 200;
+    const k = ease.out(prog(t, ev.missionOpp, 0.2)), s = 6;
+    const ch = 110, cw = ch * crests.opp.width / crests.opp.height;
+    const textW = Math.max(measure(M.oppLabel), measure(M.opp)) * s;
+    const total = cw + 28 + textW, x0 = W / 2 - total / 2, y0 = py + 195;
     ctx.save(); ctx.globalAlpha *= k;
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(crests.hellas, x0, y0, cw, ch);
-    const str = typed(opp, ev.missionOpp), lx = x0 + cw + 24, ly = y0 + (ch - 7 * s) / 2;
-    const w1 = drawText(ctx, str.slice(0, cut), lx, ly, s, '#ffffff');
-    if (str.length > cut) drawText(ctx, str.slice(cut), lx + w1 + s, ly, s, '#8fb6ff');
+    ctx.shadowColor = 'rgba(255,255,255,0.45)'; ctx.shadowBlur = 14;
+    ctx.drawImage(crests.opp, x0, y0, cw, ch);
+    ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+    const lx = x0 + cw + 28;
+    drawText(ctx, typed(M.oppLabel, ev.missionOpp), lx, y0 + 8, s, '#ffffff');
+    const t2 = ev.missionOpp + M.oppLabel.length * 0.03;
+    if (t >= t2) drawText(ctx, typed(M.opp, t2), lx, y0 + 8 + 9 * s + 6, s, '#ffe14a');
     ctx.restore();
   }
 
   // objective with a subtle green highlight bar
   if (t >= ev.missionGoal) {
     const k = ease.out(prog(t, ev.missionGoal, 0.2));
-    const bx = px + 50, by = py + 320, bw = (pw - 100) * k, bh = 110;
+    const bx = px + 50, by = py + 340, bw = (pw - 100) * k, bh = 110;
     ctx.fillStyle = 'rgba(70,210,90,0.16)'; ctx.fillRect(bx, by, bw, bh);
     ctx.fillStyle = 'rgba(110,255,120,0.55)'; ctx.fillRect(bx, by, bw, 5); ctx.fillRect(bx, by + bh - 5, bw, 5);
     ctx.fillRect(bx, by, 5, bh);
-    drawText(ctx, typed(TEXT.mission[2], ev.missionGoal), px + 90, by + 27, 8, '#ffffff');
+    drawText(ctx, typed(M.goal, ev.missionGoal), px + 90, by + 27, 8, '#ffffff');
   }
   // accepted (stamp + flash)
   if (t >= ev.missionAccept) {
     const k = prog(t, ev.missionAccept, 0.18), s = 7 * (1 + 0.35 * (1 - ease.out(k)));
     ctx.save();
     ctx.globalAlpha = clamp(k * 3);
-    drawText(ctx, TEXT.mission[3], W / 2, py + 485 - (s - 7) * 3.5, s, '#55ff55', { align: 'center' });
+    drawText(ctx, M.accept, W / 2, py + 510 - (s - 7) * 3.5, s, '#55ff55', { align: 'center' });
     ctx.restore();
     const f = 1 - prog(t, ev.missionAccept, 0.35);
     if (f > 0) { ctx.fillStyle = `rgba(120,255,120,${0.25 * f})`; ctx.fillRect(px + 10, py + 10, pw - 20, ph - 20); }
@@ -257,16 +260,18 @@ export function drawFinal(ctx, t, crests) {
     ctx.globalAlpha = clamp(k * 4);
     ctx.translate(cx, cy); ctx.scale(s, s); ctx.translate(-cx, -cy);
     darkPanel(ctx, cx - fw / 2, cy - fh / 2, fw, fh);
-    const ch = 342, cw = ch * img.width / img.height;
+    const ch = Math.min(342, 280 * img.height / img.width), cw = ch * img.width / img.height;
     ctx.imageSmoothingEnabled = !nearest; ctx.imageSmoothingQuality = 'high';
+    ctx.shadowColor = 'rgba(255,255,255,0.4)'; ctx.shadowBlur = 22; // soft halo so a dark crest reads on the dark panel
     ctx.drawImage(img, Math.round(cx - cw / 2), Math.round(cy - ch / 2), Math.round(cw), ch);
+    ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
     const f = 1 - prog(t, t0, 0.25);
     if (f > 0) { ctx.fillStyle = `rgba(255,255,255,${0.7 * f})`; ctx.fillRect(cx - fw / 2 + 10, cy - fh / 2 + 10, fw - 20, fh - 20); }
     ctx.restore();
   };
-  const cy = 790;
+  const cy = 770;
   frame(crests.ksv, 265, cy, F.ksv, false);
-  frame(crests.hellas, W - 265, cy, F.hellas, false);
+  frame(crests.opp, W - 265, cy, F.opp, false);
 
   if (t >= F.vs) {
     const k = prog(t, F.vs, 0.2), s = Math.round(12 * (1 + 1.2 * (1 - ease.out(k))));
@@ -278,7 +283,7 @@ export function drawFinal(ctx, t, crests) {
   // info panel
   if (t >= F.line1) {
     const k = ease.out(prog(t, F.line1, 0.25));
-    const px = 70, pw = W - 140, py = 1090 + 40 * (1 - k), ph = 370;
+    const px = 70, pw = W - 140, py = 1055 + 40 * (1 - k), ph = 415;
     ctx.save(); ctx.globalAlpha = k;
     darkPanel(ctx, px, py, pw, ph);
     const fit = (str, s0, maxW) => { let s = s0; while (measure(str) * s > maxW && s > 2) s -= 0.5; return s; };
@@ -290,10 +295,11 @@ export function drawFinal(ctx, t, crests) {
       drawText(ctx, str, W / 2, y + 16 * (1 - kk), s, color, { align: 'center' });
       ctx.restore();
     };
-    line(TEXT.match, F.line1, py + 58, 7, '#ffffff');
-    ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(px + 60, py + 145, pw - 120, 5);
-    line(TEXT.date, F.line2, py + 185, 6, '#ffd447');
-    line(TEXT.place, F.line3, py + 275, 6, '#bcd3ff');
+    line(TEXT.match, F.line1, py + 52, 7, '#ffffff');
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(px + 60, py + 135, pw - 120, 5);
+    line(TEXT.date, F.line2, py + 168, 6, '#ffd447');
+    line(TEXT.place[0], F.line3, py + 252, 6, '#bcd3ff');
+    line(TEXT.place[1], F.line4, py + 322, 6, '#bcd3ff');
     ctx.restore();
   }
 }

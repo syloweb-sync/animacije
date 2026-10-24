@@ -45,22 +45,24 @@
     crest: b(21),                             // opponent crest lights up
     breath: b(23.5),                          // half a beat of silence before the hit
     flash: b(24),
-    fin: { ksv: b(24), hellas: b(24.5), vs: b(25), line1: b(25.5), line2: b(26), line3: b(26.5) },
+    fin: { ksv: b(24), opp: b(24.5), vs: b(25), line1: b(25.5), line2: b(26), line3: b(26.5), line4: b(27) },
     end: b(28),                               // the last chord
   };
 
+  // all on-screen text (German)
   const TEXT = {
     title: ['KSV TRENK', 'AUGSBURG'],
-    tooltip: 'Nogometna lopta',
-    mission: ['NOVA MISIJA', 'PROTIVNIK: FC HELLAS', 'CILJ: 3 BODA', 'Misija prihvaćena ✓'],
-    match: 'KSV Trenk - FC Hellas',
-    date: '25.10.2026. · 14:30',
-    place: 'Duga Arena, Augsburg',
+    tooltip: 'Fußball',
+    mission: { title: 'NEUE MISSION', oppLabel: 'GEGNER:', opp: 'TSV LEITERSHOFEN 2', goal: 'ZIEL: 3 PUNKTE', accept: 'Mission angenommen' },
+    match: 'TSV Leitershofen 2 - KSV Trenk',
+    date: '01.11.2026 · 12:00 Uhr',
+    place: ['Bergstraße 20', '86391 Stadtbergen'],
   };
+  const NAME = 'ksv-leitershofen-reel'; // output file name
 
   const previewTimes = [0.3, 1.2, 2.3, 3.5, 5.0, 6.6, 7.3, 8.6, 9.6, 10.9, 12.4, 13.4, 14.3, 15.6, 16.6, 19.0];
 
-  const SCORE = { W, H, FPS, DURATION, BPM, BEAT, BAR, b, S, ev, TEXT, previewTimes };
+  const SCORE = { W, H, FPS, DURATION, BPM, BEAT, BAR, b, S, ev, TEXT, NAME, previewTimes };
   if (typeof module !== 'undefined' && module.exports) module.exports = SCORE;
   else root.SCORE = SCORE;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

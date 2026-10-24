@@ -1,5 +1,5 @@
 // RENDERER — serves the project, drives headless Chromium (Playwright) and pipes frames to ffmpeg.
-//   node render.js                 full render -> out/ksv-hellas-reel.mp4 (needs out/music.wav from song.js)
+//   node render.js                 full render -> out/<SCORE.NAME>.mp4 (needs out/music.wav from song.js)
 //   node render.js --preview       key frames -> out/pregled.png (contact sheet) + out/preview/*.png
 //   node render.js --still 12.5    one frame  -> out/still-12.50.png
 //   options: --workers 2  --from 0 --to 15  --resume (keep frames already rendered)
@@ -106,13 +106,13 @@ async function main() {
   await browser.close(); server.close();
 
   const music = path.join(OUT, 'music.wav');
-  const mp4 = path.join(OUT, 'ksv-hellas-reel.mp4');
+  const mp4 = path.join(OUT, `${SCORE.NAME}.mp4`);
   const ff = ['-v', 'error', '-y', '-framerate', String(fps), '-start_number', String(from), '-i', path.join(dir, 'f%04d.png')];
   if (fs.existsSync(music)) ff.push('-ss', String(from / fps), '-i', music, '-c:a', 'aac', '-b:a', '192k', '-shortest');
   ff.push('-c:v', 'libx264', '-preset', 'slow', '-crf', '16', '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-movflags', '+faststart', mp4);
   const r = spawnSync('ffmpeg', ff, { stdio: 'inherit' });
   if (r.status) process.exit(r.status);
-  console.log(`wrote out/ksv-hellas-reel.mp4 (${to - from} frames, ${((Date.now() - t0) / 1000).toFixed(0)}s)`);
+  console.log(`wrote out/${SCORE.NAME}.mp4 (${to - from} frames, ${((Date.now() - t0) / 1000).toFixed(0)}s)`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
