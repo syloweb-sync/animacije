@@ -10,6 +10,10 @@ Instagram Reel (9:16, 1080×1920, 30 fps, 15 s) u stilu igre od kocaka. Svaki ka
 | 7–11 s | reflektori se pale, igrač FC Hellasa izlazi iz tunela, otkriva se njihov grb |
 | 11–15 s | najava: grbovi, VS, KSV Trenk - FC Hellas · 25.10.2026. · 14:30 · Duga Arena, Augsburg |
 
+## Gotov video
+- `video/ksv-hellas-reel.mp4`: Reel (H.264 + AAC, 1080×1920, 15 s, −14 LUFS)
+- `video/naslovnica.png`: naslovnica (završni kadar)
+
 ## Pokretanje
 Potrebno: Node 22+, ffmpeg, Playwright s Chromiumom.
 
