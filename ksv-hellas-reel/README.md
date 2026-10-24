@@ -1,17 +1,20 @@
 # KSV Trenk – FC Hellas · 3D voxel najava utakmice
 
-Instagram Reel (9:16, 1080×1920, 30 fps, 15 s) u stilu igre od kocaka. Svaki kadar je 3D scena (Three.js) renderirana u pregledniku, a cijela glazba i svi zvučni efekti sintetizirani su u kodu. Slika i zvuk čitaju isti vremenski raspored (`score.js`), pa su uvijek usklađeni.
+Instagram Reel (9:16, 1080×1920, 30 fps, 20 s, 90 BPM) u stilu igre od kocaka. Svaki kadar je 3D scena (Three.js) renderirana u pregledniku, a cijela glazba i svi zvučni efekti sintetizirani su u kodu. Slika i zvuk čitaju isti vremenski raspored (`score.js`), pa su uvijek usklađeni.
 
 ## Scene
 | vrijeme | scena |
 |---|---|
-| 0–4 s | svlačionica, inventar (dres, kopačke, boca, lopta), igrač odabire loptu |
-| 4–7 s | tamni ekran: NOVA MISIJA · CILJ: 3 BODA · Misija prihvaćena ✓ |
-| 7–11 s | reflektori se pale, igrač FC Hellasa izlazi iz tunela, otkriva se njihov grb |
-| 11–15 s | najava: grbovi, VS, KSV Trenk - FC Hellas · 25.10.2026. · 14:30 · Duga Arena, Augsburg |
+| 0–2,7 s | KSV Trenk grb u svlačionici + naslov KSV TRENK / AUGSBURG |
+| 2,7–8 s | igrač u dresu KSV-a, inventar (dres, kopačke, boca, lopta), odabire loptu |
+| 8–12 s | NOVA MISIJA · PROTIVNIK: FC HELLAS · CILJ: 3 BODA · Misija prihvaćena ✓ |
+| 12–16 s | reflektori se pale, igrač FC Hellasa izlazi iz tunela, otkriva se njihov grb |
+| 16–20 s | najava: grbovi, VS, KSV Trenk - FC Hellas · 25.10.2026. · 14:30 · Duga Arena, Augsburg |
+
+Dresovi su izrađeni prema stvarnim dresovima klubova. Sponzori (SF Innenausbau, GYROLAND) su samo pikselni natpisi, a ne originalni logotipi.
 
 ## Gotov video
-- `video/ksv-hellas-reel.mp4`: Reel (H.264 + AAC, 1080×1920, 15 s, −14 LUFS)
+- `video/ksv-hellas-reel.mp4`: Reel (H.264 + AAC, 1080×1920, 20 s, −14 LUFS)
 - `video/naslovnica.png`: naslovnica (završni kadar)
 
 ## Pokretanje
@@ -27,7 +30,7 @@ node render.js              # cijeli video -> out/ksv-hellas-reel.mp4
 
 ## Gdje se što mijenja
 - **Tekstovi, datum, vrijeme i mjesto:** `TEXT` u `score.js`
-- **Vrijeme događaja:** `ev` u `score.js`
+- **Vrijeme događaja:** `ev` u `score.js` (u dobama; tempo se mijenja preko `BPM`)
 - **Dresovi:** `KITS` u `src/world.js`
 - **Grbovi:** `assets/` (koriste se originalni, samo uniformno skalirani)
 

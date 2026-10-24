@@ -160,14 +160,16 @@ export function iconBottle() {
 
 export function iconJersey(crest) {
   const c = cv(32, 32), g = c.getContext('2d');
-  poly(g, [[11, 3], [14, 5], [18, 5], [21, 3], [28, 6], [31, 12], [26, 15], [24, 13], [24, 29], [8, 29], [8, 13], [6, 15], [1, 12], [4, 6]], '#1f4fbf');
-  g.fillStyle = '#ffffff';
-  poly(g, [[1, 12], [3, 9], [7, 13], [6, 15]], '#ffffff');
-  poly(g, [[31, 12], [29, 9], [25, 13], [26, 15]], '#ffffff');
-  g.fillRect(8, 14, 2, 15); g.fillRect(22, 14, 2, 15);
-  for (let i = 0; i < 4; i++) { g.fillRect(12 + i, 3 + i, 1, 1); g.fillRect(19 - i, 3 + i, 1, 1); }
+  poly(g, [[11, 3], [14, 5], [18, 5], [21, 3], [28, 6], [31, 12], [26, 15], [24, 13], [24, 29], [8, 29], [8, 13], [6, 15], [1, 12], [4, 6]], '#1550b8');
+  // dark raglan sleeves, white cuffs, white round collar
+  poly(g, [[4, 6], [11, 3], [12, 5], [8, 13], [6, 15], [1, 12]], '#18264a');
+  poly(g, [[28, 6], [21, 3], [20, 5], [24, 13], [26, 15], [31, 12]], '#18264a');
+  poly(g, [[1, 12], [2, 10], [7, 13.5], [6, 15]], '#ffffff');
+  poly(g, [[31, 12], [30, 10], [25, 13.5], [26, 15]], '#ffffff');
+  g.fillStyle = '#ffffff'; g.fillRect(12, 3, 8, 1); g.fillRect(11, 3, 1, 2); g.fillRect(20, 3, 1, 2); g.fillRect(13, 4, 6, 1);
   finishIcon(c, { outline: 0.5 });
-  if (crest) { g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(crest, 0, 0, crest.width, crest.height, 12, 10, 8.4, 12); }
+  if (crest) { g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(crest, 0, 0, crest.width, crest.height, 17, 8, 6.2, 9); }
+  g.fillStyle = '#ffffff'; g.fillRect(11, 19, 10, 1); g.fillRect(12, 21, 8, 1); // sponsor hint
   // re-quantise the crest pixels so the icon stays crisp pixel art
   const img = g.getImageData(0, 0, 32, 32);
   for (let i = 3; i < img.data.length; i += 4) img.data[i] = img.data[i] >= 128 ? 255 : 0;
@@ -224,42 +226,60 @@ export function makeSkin(sp) {
   const headBack = face(8, 8, (x, y) => (y <= 6 ? hair(x, y) : skin(x, y)));
   const head = { px: side(true), nx: side(false), py: face(8, 8, hair), ny: face(8, 8, skin), pz: headFront, nz: headBack };
 
-  // BODY 8x12x4
-  const shirt = (x, y) => {
-    if (sp.stripes && x % 2 === 1) return jitter(sp.stripes, x, y, 0.06);
-    return jitter(sp.shirt, x, y, 0.06);
-  };
+  // BODY 8x12x4: base colour, raglan shoulders, optional side panels
+  const shirt = (x, y) => jitter(sp.shirt, x, y, 0.06);
+  const raglan = (x, y) => jitter(sp.sleeve, x, y, sp.sleevePattern ? 0.35 : 0.06);
   const bodyFront = face(8, 12, (x, y) => {
     if (y === 0 && x >= 2 && x <= 5) return hex(sp.collar);
-    if (y === 1 && (x === 3 || x === 4)) return hex(sp.collar);
-    if (y === 11) return mul(hex(sp.stripes && x % 2 ? sp.stripes : sp.shirt), 0.82);
+    if ((y === 0 && (x <= 1 || x >= 6)) || (y === 1 && (x === 0 || x === 7))) return raglan(x, y);
+    if (sp.sidePanel && y >= 2 && (x === 0 || x === 7)) return jitter(sp.sidePanel, x, y, 0.05);
+    if (y === 11) return mul(hex(sp.shirt), 0.82);
     return shirt(x, y);
   });
-  if (sp.crest) {
-    const g = bodyFront.getContext('2d');
-    g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
-    const h = 3.6 * RS, w = h * sp.crest.width / sp.crest.height;
-    g.fillStyle = sp.stripes ? 'rgba(255,255,255,0.0)' : 'rgba(0,0,0,0)';
-    g.drawImage(sp.crest, 5.4 * RS - w / 2, 2.2 * RS, w, h);
+  const fg = bodyFront.getContext('2d');
+  if (sp.crest) { // on the left chest (viewer's right)
+    fg.imageSmoothingEnabled = true; fg.imageSmoothingQuality = 'high';
+    const h = 2.6 * RS, w = h * sp.crest.width / sp.crest.height;
+    fg.drawImage(sp.crest, 5.6 * RS - w / 2, 1.3 * RS, w, h);
   }
-  const bodyBack = face(8, 12, (x, y) => (y === 0 && x >= 2 && x <= 5 ? hex(sp.collar) : shirt(x, y)));
+  // sponsor as pixel lettering (not the sponsor's logo artwork)
+  for (const ln of sp.sponsor || []) {
+    const cube = ln.cube ? 14 : 0, tw = measure(ln.text) * ln.s, total = tw + (cube ? cube + 4 : 0);
+    const x0 = Math.round((8 * RS - total) / 2), y0 = Math.round(ln.y * RS);
+    if (cube) {
+      fg.fillStyle = '#c9ced8'; fg.fillRect(x0, y0, 9, 9);
+      fg.fillStyle = '#8b919c'; fg.fillRect(x0 + 5, y0 + 5, 9, 9);
+      fg.fillStyle = '#aab0bb'; fg.fillRect(x0 + 5, y0 + 5, 4, 4);
+    }
+    drawGlyphs(fg, ln.text, x0 + (cube ? cube + 4 : 0), y0, ln.s, ln.color || '#ffffff');
+  }
+  const bodyBack = face(8, 12, (x, y) => {
+    if (y === 0 && x >= 2 && x <= 5) return hex(sp.collar);
+    if ((y === 0 && (x <= 1 || x >= 6)) || (y === 1 && (x === 0 || x === 7))) return raglan(x, y);
+    if (sp.sidePanel && y >= 2 && (x === 0 || x === 7)) return jitter(sp.sidePanel, x, y, 0.05);
+    return shirt(x, y);
+  });
+  const bg = bodyBack.getContext('2d');
+  if (sp.backText) { const tw = measure(sp.backText); drawGlyphs(bg, sp.backText, Math.round((8 * RS - tw) / 2), Math.round(1.1 * RS), 1, sp.numberColor); }
   if (sp.number) {
-    const g = bodyBack.getContext('2d'), s = 4, wTxt = measure(sp.number) * s;
-    const ox = (8 * RS - wTxt) / 2, oy = 2.4 * RS;
-    drawGlyphs(g, sp.number, ox + s * 0.6, oy + s * 0.6, s, sp.numberShadow || 'rgba(0,0,0,0.35)');
-    drawGlyphs(g, sp.number, ox, oy, s, sp.numberColor);
+    const s = 4, wTxt = measure(sp.number) * s;
+    const ox = (8 * RS - wTxt) / 2, oy = 2.6 * RS;
+    drawGlyphs(bg, sp.number, ox + s * 0.6, oy + s * 0.6, s, sp.numberShadow || 'rgba(0,0,0,0.35)');
+    drawGlyphs(bg, sp.number, ox, oy, s, sp.numberColor);
   }
-  const bodySide = face(4, 12, shirt);
-  const body = { px: bodySide, nx: bodySide, py: face(8, 4, shirt), ny: face(8, 4, shirt), pz: bodyFront, nz: bodyBack };
+  const bodySide = face(4, 12, (x, y) => (sp.sidePanel && (x === 1 || x === 2) ? jitter(sp.sidePanel, x, y, 0.05) : shirt(x, y)));
+  const bodyTop = face(8, 4, (x, y) => (x <= 1 || x >= 6 ? raglan(x, y) : hex(sp.collar)));
+  const body = { px: bodySide, nx: bodySide, py: bodyTop, ny: face(8, 4, shirt), pz: bodyFront, nz: bodyBack };
 
-  // ARMS 4x12x4
+  // ARMS 4x12x4: sleeve (raglan colour), cuff, skin; optional white shoulder dots
   const armFace = face(4, 12, (x, y) => {
-    if (y <= 2) return sp.sleeveStripes && x % 2 ? jitter(sp.sleeveStripes, x, y, 0.05) : jitter(sp.sleeve, x, y, 0.05);
+    if (sp.shoulderDots && ((y === 0 && x === 2) || (y === 2 && x === 1))) return [235, 238, 245];
+    if (y <= 2) return raglan(x, y);
     if (y === 3) return hex(sp.cuff);
     if (y >= 10) return mul(hex(sp.skin), 0.93);
     return skin(x, y);
   });
-  const arm = { px: armFace, nx: armFace, pz: armFace, nz: armFace, py: face(4, 4, () => hex(sp.sleeve)), ny: face(4, 4, skin) };
+  const arm = { px: armFace, nx: armFace, pz: armFace, nz: armFace, py: face(4, 4, (x, y) => (sp.shoulderDots && x === 1 && y === 2 ? [235, 238, 245] : raglan(x, y))), ny: face(4, 4, skin) };
 
   // LEGS 4x12x4
   const legFace = (outer) => face(4, 12, (x, y) => {

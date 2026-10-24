@@ -70,18 +70,21 @@ export function makePlayer(spec) {
   };
 }
 
+// kits after the clubs' real shirts (sponsors as pixel lettering only)
 export const KITS = {
   ksv: (crest) => ({
     skin: '#e0a985', skinShade: '#c98f6c', hair: '#4a2e17', eyes: '#2f63c9', mouth: '#9a5640',
-    shirt: '#1f4fbf', collar: '#ffffff', sleeve: '#ffffff', cuff: '#1f4fbf',
-    shorts: '#ffffff', shortsStripe: '#1f4fbf', socks: '#1f4fbf', sockBand: '#ffffff', boots: '#17181d', bootAccent: '#ffffff',
-    crest, number: '10', numberColor: '#ffffff',
+    shirt: '#1550b8', sleeve: '#18264a', sleevePattern: true, collar: '#ffffff', cuff: '#ffffff',
+    shorts: '#ffffff', shortsStripe: '#1550b8', socks: '#1550b8', sockBand: '#ffffff', boots: '#17181d', bootAccent: '#ffffff',
+    crest, sponsor: [{ text: 'SF', s: 2, y: 4.5, cube: true }, { text: 'INNENAUSBAU', s: 1, y: 6.6 }],
+    backText: 'KSV TRENK', number: '10', numberColor: '#ffffff',
   }),
   hellas: (crest) => ({
     skin: '#c9906a', skinShade: '#b07a57', hair: '#17110d', beard: '#231912', eyes: '#5a3a1e', mouth: '#7a4232',
-    shirt: '#ffffff', stripes: '#3a3589', collar: '#3a3589', sleeve: '#3a3589', cuff: '#ffffff',
-    shorts: '#2f2b78', shortsStripe: '#ffffff', socks: '#ffffff', sockBand: '#3a3589', boots: '#17181d', bootAccent: '#e3c770',
-    crest, number: '7', numberColor: '#3a3589', numberShadow: 'rgba(0,0,0,0.15)',
+    shirt: '#172b66', sleeve: '#172b66', sidePanel: '#1f5fd6', collar: '#1f5fd6', cuff: '#1f5fd6', shoulderDots: true,
+    shorts: '#172b66', shortsStripe: '#1f5fd6', socks: '#172b66', sockBand: '#1f5fd6', boots: '#17181d', bootAccent: '#e3c770',
+    crest, sponsor: [{ text: 'GYROLAND', s: 1, y: 4.8 }],
+    number: '7', numberColor: '#ffffff',
   }),
 };
 
@@ -143,15 +146,15 @@ export function buildLocker(crestKsv) {
   scene.fog = new THREE.Fog(0x0b0d14, 10, 22);
   const M = blockMats(), V = new Voxels();
   V.fill(-6, -1, -6, 5, -1, 7, 'planks');
-  V.fill(-6, 0, -6, 5, 5, -6, 'stoneBricks');
-  V.fill(-7, 0, -6, -7, 5, 7, 'stoneBricks');
-  V.fill(6, 0, -6, 6, 5, 7, 'stoneBricks');
-  V.fill(-7, 6, -6, 6, 6, 7, 'darkPlanks');
+  V.fill(-6, 0, -6, 5, 6, -6, 'stoneBricks');
+  V.fill(-7, 0, -6, -7, 6, 7, 'stoneBricks');
+  V.fill(6, 0, -6, 6, 6, 7, 'stoneBricks');
+  V.fill(-7, 7, -6, 6, 7, 7, 'darkPlanks');
   // blue/white tile stripe along the walls
   for (let x = -6; x <= 5; x++) V.set(x, 0, -6, x % 2 ? 'blue' : 'white');
   for (let z = -6; z <= 7; z++) { V.set(-7, 0, z, z % 2 ? 'blue' : 'white'); V.set(6, 0, z, z % 2 ? 'blue' : 'white'); }
   const lampM = glow(B.lamp(), 0xfff1d6);
-  V.set(-3, 6, -2, 'lamp'); V.set(2, 6, -2, 'lamp'); V.set(-3, 6, 3, 'lamp'); V.set(2, 6, 3, 'lamp');
+  V.set(-3, 7, -2, 'lamp'); V.set(2, 7, -2, 'lamp'); V.set(-3, 7, 3, 'lamp'); V.set(2, 7, 3, 'lamp');
   scene.add(V.build({ ...M, lamp: lampM }));
 
   // lockers (1 x 2 blocks) along the back wall, alternating club colours
@@ -172,12 +175,13 @@ export function buildLocker(crestKsv) {
   cg.fillStyle = '#e9ebf0'; cg.fillRect(0, 0, 48, 48); cg.fillStyle = '#2347b3'; cg.fillRect(4, 4, 40, 40);
   const cm = new THREE.Mesh(new THREE.BoxGeometry(3, 0.06, 3), lam(carpet)); cm.position.set(0, 0.03, -1); cm.receiveShadow = true; scene.add(cm);
   // the club crest in a frame above the lockers
-  const fr = crestFrame(crestKsv, 1.9, { nearest: true }); fr.group.position.set(0, 4.55, -4.85); scene.add(fr.group);
+  const fr = crestFrame(crestKsv, 2.4); fr.group.position.set(0, 5.0, -4.85); scene.add(fr.group);
+  const crestLight = new THREE.SpotLight(0xfff2dc, 18, 14, 0.45, 0.6, 2); crestLight.position.set(0, 3.2, 0.5); crestLight.target.position.set(0, 5, -4.9); scene.add(crestLight, crestLight.target);
 
   scene.add(new THREE.HemisphereLight(0xbfd2ff, 0x3a2a1a, 0.55));
   const key = new THREE.SpotLight(0xfff0dc, 110, 30, 0.6, 0.6, 2); key.position.set(2.5, 5.6, 4); key.target.position.set(0, 1, -1.5);
   key.castShadow = true; key.shadow.mapSize.set(1024, 1024); key.shadow.bias = -0.0008; scene.add(key, key.target);
-  for (const [x, z] of [[-2.5, -1.5], [2.5, -1.5], [-2.5, 3.5], [2.5, 3.5]]) { const p = new THREE.PointLight(0xffe2b8, 10, 12, 2); p.position.set(x, 5.4, z); scene.add(p); }
+  for (const [x, z] of [[-2.5, -1.5], [2.5, -1.5], [-2.5, 3.5], [2.5, 3.5]]) { const p = new THREE.PointLight(0xffe2b8, 12, 14, 2); p.position.set(x, 6.4, z); scene.add(p); }
   const rim = new THREE.SpotLight(0x7fa6ff, 30, 20, 0.7, 0.8, 2); rim.position.set(-3, 4, -2.8); rim.target.position.set(0, 1.4, -1); scene.add(rim, rim.target);
   return { scene, crestFrame: fr };
 }

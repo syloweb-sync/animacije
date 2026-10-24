@@ -109,7 +109,7 @@ export function drawInventory(ctx, t, icons, drawPreview) {
   if (a <= 0.001) return;
   ctx.save();
   // dim + slight scale pop around the panel centre, plus a gentle push-in
-  const push = 1 + 0.025 * prog(t, ev.invOpen, 3.4);
+  const push = 1 + 0.025 * prog(t, ev.invOpen, SC.S.inv[1] - ev.invOpen);
   const sc = (0.88 + 0.12 * a) * push;
   const cx = W / 2, cy = Y0 + PANEL.h * GS / 2;
   ctx.globalAlpha = clamp(a * 1.4);
@@ -162,10 +162,11 @@ function darkPanel(ctx, x, y, w, h, s = 5) {
   guiPanel(ctx, x, y, Math.round(w / s), Math.round(h / s), s, { fill: 'rgba(12,14,24,0.9)', light: '#4d5268', dark: '#151722', line: '#000000' });
 }
 
-export function drawMission(ctx, t, icons) {
+export function drawMission(ctx, t, icons, crests) {
   if (t < ev.missionOpen || t >= ev.wipe2) return;
   const a = ease.back(prog(t, ev.missionOpen, 0.22));
-  const pw = 880, ph = 470, px = (W - pw) / 2, py = 330;
+  const pw = 880, ph = 590, px = (W - pw) / 2, py = 290;
+  const typed = (str, t0) => str.slice(0, Math.min(str.length, Math.floor((t - t0) / 0.03) + 1));
   ctx.save();
   ctx.globalAlpha = clamp(prog(t, ev.missionOpen, 0.12));
   ctx.translate(W / 2, py + ph / 2); ctx.scale(0.85 + 0.15 * a, 0.85 + 0.15 * a); ctx.translate(-W / 2, -(py + ph / 2));
@@ -176,35 +177,70 @@ export function drawMission(ctx, t, icons) {
   const ts = 9, tw = measure(title) * ts, iconS = 84, gap = 26;
   const tx = W / 2 - (tw + iconS + gap) / 2;
   if (t >= ev.missionTitle) {
-    const n = Math.min(title.length, Math.floor((t - ev.missionTitle) / 0.03) + 1);
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(icons.lopta, tx, py + 52, iconS, iconS);
-    drawText(ctx, title.slice(0, n), tx + iconS + gap, py + 62, ts, '#ffc531');
+    drawText(ctx, typed(title, ev.missionTitle), tx + iconS + gap, py + 62, ts, '#ffc531');
   }
   // divider
   ctx.fillStyle = '#2c3043';
   for (let x = px + 40; x < px + pw - 40; x += 20) ctx.fillRect(x, py + 165, 10, 5);
 
+  // opponent: crest + PROTIVNIK: FC HELLAS
+  if (t >= ev.missionOpp) {
+    const k = ease.out(prog(t, ev.missionOpp, 0.2));
+    const opp = TEXT.mission[1], cut = opp.indexOf(':') + 1, s = 6;
+    const ch = 92, cw = ch * crests.hellas.width / crests.hellas.height;
+    const total = cw + 24 + measure(opp) * s, x0 = W / 2 - total / 2, y0 = py + 200;
+    ctx.save(); ctx.globalAlpha *= k;
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(crests.hellas, x0, y0, cw, ch);
+    const str = typed(opp, ev.missionOpp), lx = x0 + cw + 24, ly = y0 + (ch - 7 * s) / 2;
+    const w1 = drawText(ctx, str.slice(0, cut), lx, ly, s, '#ffffff');
+    if (str.length > cut) drawText(ctx, str.slice(cut), lx + w1 + s, ly, s, '#8fb6ff');
+    ctx.restore();
+  }
+
   // objective with a subtle green highlight bar
   if (t >= ev.missionGoal) {
     const k = ease.out(prog(t, ev.missionGoal, 0.2));
-    const bx = px + 50, by = py + 200, bw = (pw - 100) * k, bh = 110;
+    const bx = px + 50, by = py + 320, bw = (pw - 100) * k, bh = 110;
     ctx.fillStyle = 'rgba(70,210,90,0.16)'; ctx.fillRect(bx, by, bw, bh);
     ctx.fillStyle = 'rgba(110,255,120,0.55)'; ctx.fillRect(bx, by, bw, 5); ctx.fillRect(bx, by + bh - 5, bw, 5);
     ctx.fillRect(bx, by, 5, bh);
-    const goal = TEXT.mission[1], n = Math.min(goal.length, Math.floor((t - ev.missionGoal) / 0.03) + 1);
-    drawText(ctx, goal.slice(0, n), px + 90, by + 27, 8, '#ffffff');
+    drawText(ctx, typed(TEXT.mission[2], ev.missionGoal), px + 90, by + 27, 8, '#ffffff');
   }
   // accepted (stamp + flash)
   if (t >= ev.missionAccept) {
     const k = prog(t, ev.missionAccept, 0.18), s = 7 * (1 + 0.35 * (1 - ease.out(k)));
-    const txt = TEXT.mission[2];
     ctx.save();
     ctx.globalAlpha = clamp(k * 3);
-    drawText(ctx, txt, W / 2, py + 360 - (s - 7) * 3.5, s, '#55ff55', { align: 'center' });
+    drawText(ctx, TEXT.mission[3], W / 2, py + 485 - (s - 7) * 3.5, s, '#55ff55', { align: 'center' });
     ctx.restore();
     const f = 1 - prog(t, ev.missionAccept, 0.35);
     if (f > 0) { ctx.fillStyle = `rgba(120,255,120,${0.25 * f})`; ctx.fillRect(px + 10, py + 10, pw - 20, ph - 20); }
+  }
+  ctx.restore();
+}
+
+// ------------------------------------------------------------------ SCENE 0: KSV Trenk title under the crest
+export function drawTitle(ctx, t) {
+  if (t < ev.title) return;
+  const out = SC.S.intro[1] - SC.BEAT * 1.25;
+  const fade = 1 - clamp((t - out) / (SC.BEAT * 0.75));
+  if (fade <= 0) return;
+  const k = prog(t, ev.title, 0.22), s = Math.round(13 * (1 + 0.5 * (1 - ease.back(k))));
+  ctx.save();
+  ctx.globalAlpha = clamp(k * 4) * fade;
+  const y = 1500;
+  const g = ctx.createLinearGradient(0, y - 60, 0, y + 260);
+  g.addColorStop(0, 'rgba(4,8,24,0)'); g.addColorStop(0.2, 'rgba(4,8,24,0.9)'); g.addColorStop(0.85, 'rgba(4,8,24,0.9)'); g.addColorStop(1, 'rgba(4,8,24,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, y - 60, W, 320);
+  drawText(ctx, TEXT.title[0], W / 2, y + 7 * (13 - s) / 2, s, '#ffffff', { align: 'center', shadowColor: '#1d5ad0' });
+  if (t >= ev.title + SC.BEAT / 2) {
+    const k2 = ease.out(prog(t, ev.title + SC.BEAT / 2, 0.25));
+    ctx.globalAlpha = k2 * fade;
+    ctx.fillStyle = '#d0162a'; ctx.fillRect(W / 2 - 230 * k2, y + 118, 460 * k2, 6);
+    drawText(ctx, TEXT.title[1], W / 2, y + 150, 7, '#a9c8ff', { align: 'center' });
   }
   ctx.restore();
 }
@@ -229,7 +265,7 @@ export function drawFinal(ctx, t, crests) {
     ctx.restore();
   };
   const cy = 790;
-  frame(crests.ksv, 265, cy, F.ksv, true);
+  frame(crests.ksv, 265, cy, F.ksv, false);
   frame(crests.hellas, W - 265, cy, F.hellas, false);
 
   if (t >= F.vs) {

@@ -10,7 +10,7 @@ import { buildLocker, buildDark, buildStadium, makePlayer, makeBall, KITS, drift
 import * as UI from './ui.js';
 
 const SC = globalThis.SCORE;
-const { W, H, ev, BEAT } = SC;
+const { W, H, ev, BEAT, S } = SC;
 const { clamp, lerp, ease, prog } = UI;
 const NOUI = new URLSearchParams(location.search).has('noui'); // debug: 3D only
 
@@ -34,7 +34,7 @@ const blurCv = document.createElement('canvas'); blurCv.width = W / 2; blurCv.he
 
 // ------------------------------------------------------------------ assets + sets
 const [ksvImg, helImg] = await Promise.all([loadImage('assets/grb-ksv-trenk.png'), loadImage('assets/grb-fc-hellas.png')]);
-const ksv = crop(ksvImg, 25, 8, 80, 114);       // content bounds of the supplied crests (no edits)
+const ksv = crop(ksvImg, 0, 0, ksvImg.width, ksvImg.height); // supplied crests, trimmed to content (no edits)
 const hellas = crop(helImg, 112, 0, 576, 800);
 const icons = { lopta: upscale(iconBall()), kopacke: upscale(iconBoots()), boca: upscale(iconBottle()), dres: upscale(iconJersey(ksv)) };
 UI.setWipeTile(upscale(B.deepslate(), 6));
@@ -68,16 +68,28 @@ const shake = (t, t0, amt = 0.08, dur = 0.3) => {
 const lampOn = (t, t0) => { if (t < t0) return 0; const u = t - t0; if (u < 0.05) return 1; if (u < 0.09) return 0.25; if (u < 0.13) return 1.2; return 1; };
 const idle = (t) => ({ bob: Math.sin(t * Math.PI) * 0.01, armRz: 0.06, armLz: -0.06 });
 
-// ------------------------------------------------------------------ SCENE 1: locker room + inventory
+// ------------------------------------------------------------------ SCENE 0+1: KSV crest intro, locker room + inventory
+const CAM_CREST = [[0, 4.7, 3.2], [0, 4.7, 2.0], [0, 4.25, -4.85]]; // start, end of the slow push, look-at (below the crest so it sits high)
+const CAM_ROOM = [[0.0, 1.5, 7.2], [0.35, 1.6, 3.6], [0, 1.35, -1.6], [0, 1.45, -1.6]];
 function sceneLocker(t) {
-  const k = ease.inOut(prog(t, 0, 4));
-  shoot(lerp3([0.0, 1.5, 7.2], [0.35, 1.6, 3.6], k), lerp3([0, 1.35, -1.6], [0, 1.45, -1.6], k), 50);
+  const crane = S.intro[1] - BEAT; // crane down from the crest to the player: last beat of the intro into the inventory
+  if (t < crane) {
+    const k = ease.out(prog(t, 0, crane));
+    shoot(lerp3(CAM_CREST[0], CAM_CREST[1], k), CAM_CREST[2], 50);
+  } else if (t < ev.invOpen) {
+    const k = ease.inOut(prog(t, crane, ev.invOpen - crane));
+    shoot(lerp3(CAM_CREST[1], CAM_ROOM[0], k), lerp3(CAM_CREST[2], CAM_ROOM[2], k), 50);
+  } else {
+    const k = ease.inOut(prog(t, ev.invOpen, S.inv[1] - ev.invOpen));
+    shoot(lerp3(CAM_ROOM[0], CAM_ROOM[1], k), lerp3(CAM_ROOM[2], CAM_ROOM[3], k), 50);
+  }
   const holding = t >= ev.place;
   ballK.visible = holding;
-  const look = t < ev.invOpen ? 0.25 * (1 - prog(t, 0, ev.invOpen)) : 0;
+  const look = t < ev.invOpen ? 0.25 * (1 - prog(t, crane, ev.invOpen - crane)) : 0;
   pK.pose({ ...idle(t), headPitch: 0.15 * (t >= ev.invOpen ? 1 : 0), headYaw: look, armR: holding ? -0.55 : 0 });
+  LK.crestFrame.crestMat.color.setScalar(0.9); // keep the crest under the bloom threshold: true colours, no halo
   renderPass.scene = LK.scene;
-  bloom.strength = 0.45; bloom.threshold = 0.85;
+  bloom.strength = 0.4; bloom.threshold = 0.93;
   renderer.toneMappingExposure = 1.05;
 }
 
@@ -102,16 +114,17 @@ function drawPreview(t) {
 
 // ------------------------------------------------------------------ SCENE 2: dark mission stage
 function sceneDark(t) {
-  const u = prog(t, ev.wipe1, 3), k = ease.inOut(u);
+  const u = prog(t, S.mission[0], S.mission[1] - S.mission[0]), k = ease.inOut(u);
   const ang = lerp(-0.55, 0.3, k), r = lerp(5.9, 5.1, k), hgt = lerp(0.9, 1.15, k);
   shoot([Math.sin(ang) * r, hgt, Math.cos(ang) * r], [0, 2.75, 0], 60);
   // dribble: the ball hits the floor on the beat, then is caught when the mission is accepted
   const hand = 0.92, floor = 0.15;
   let by = hand, bz = 0.42, armR = -0.55;
   const hits = ev.bounces;
-  if (t >= hits[0] - 0.25 && t < ev.missionAccept) {
+  const hp = BEAT / 2; // half a bounce
+  if (t >= hits[0] - hp && t < ev.missionAccept) {
     let best = hits[0]; for (const h of hits) if (Math.abs(t - h) < Math.abs(t - best)) best = h;
-    const q = clamp(Math.abs(t - best) / 0.25);
+    const q = clamp(Math.abs(t - best) / hp);
     by = floor + (hand - floor) * (1 - (1 - q) * (1 - q));
     armR = -0.55 + 0.35 * (1 - q) * (t < best ? 1 : 0.4);
   }
@@ -150,7 +163,7 @@ function stadiumLights(t, finalShot) {
 function sceneTunnel(t) {
   // wide on the main stand while its lights clunk on, then a slow dolly down to a low hero angle:
   // the opponent in the lower half, his club crest framed above the tunnel
-  const k = ease.inOut(prog(t, ev.wipe2, 3.7)), zf = ST.zf;
+  const k = ease.inOut(prog(t, S.opp[0], (S.opp[1] - S.opp[0]) * 0.92)), zf = ST.zf;
   const sx = Math.sin(t * 0.8) * 0.25 * (1 - k);
   shoot([sx, lerp(3.6, 0.9, k), zf + lerp(23, 11.5, k)], [0, lerp(8.5, 4.5, k), zf], 56);
   stadiumLights(t, false);
@@ -176,7 +189,7 @@ function sceneTunnel(t) {
 }
 
 function sceneFinal(t) {
-  const k = ease.out(prog(t, ev.flash, 4));
+  const k = ease.out(prog(t, S.final[0], S.final[1] - S.final[0]));
   const [a, b] = shake(t, ev.fin.vs, 0.12, 0.35);
   shoot([lerp(25, 20, k) + a, lerp(3.4, 4.4, k) + b, 0], [-24, lerp(3.2, 4.0, k), 0], 62);
   stadiumLights(t, true);
@@ -212,8 +225,9 @@ window.renderAt = (t) => {
     UI.fill(ctx, '#05060a', 0.5 * clamp(inv));
   }
   UI.vignette(ctx, t >= ev.wipe1 && t < ev.wipe2 ? 0.75 : 0.5);
+  if (t < S.intro[1]) UI.drawTitle(ctx, t);
   if (t < ev.wipe1) UI.drawInventory(ctx, t, icons, drawPreview(t));
-  UI.drawMission(ctx, t, icons);
+  UI.drawMission(ctx, t, icons, { hellas });
   if (t >= ev.flash) UI.drawFinal(ctx, t, { ksv, hellas });
 
   // transitions
