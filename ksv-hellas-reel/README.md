@@ -19,6 +19,7 @@ Dresovi su izrađeni prema stvarnim dresovima klubova. Sponzori (SF Innenausbau,
 - `video/ksv-leitershofen-reel.mp4`: aktualni Reel (H.264 + AAC, 1080×1920, 20 s, −14 LUFS)
 - `video/ksv-hellas-reel.mp4`: prethodna najava (KSV Trenk - FC Hellas, hrvatski)
 - `video/ksv-sieg-3-punkte.mp4`: video pobjede (KSV Trenk - FC Hellas)
+- `video/ksv-gta-reel.mp4`: najava u stilu igre iz 2000-ih (TSV Leitershofen 2 - KSV Trenk)
 - `video/naslovnica-*.png`: naslovnice (završni kadar)
 
 ## Drugi video: pobjeda „3 PUNKTE” (KSV Trenk - FC Hellas)
@@ -34,6 +35,19 @@ Datoteke: `score-win.js`, `song-win.js`, `index-win.html`, `src/film-win.js` (ko
 node song-win.js                       # -> out/music-win.wav
 node render.js --film win --preview    # kontakt-list
 node render.js --film win              # -> out/ksv-sieg-3-punkte.mp4
+```
+
+## Treći video: najava u stilu igre iz 2000-ih (`--film gta`)
+Najava (~20 s, 90 BPM) u stilu tadašnjih igara otvorenog svijeta: izbornik prema snimci iz igre (gotički naslov, odrezana slika u kutu s brdom i natpisom TRENK, stavke, zvjezdasti križ), učitavanje, pa niski auto dolazi pred stadion u zlatnom satu i staje. Lik u KSV dresu izađe, zalupi vrata i napravi par koraka, a zatim slijedi kartica utakmice. Glazba je originalna G-funk podloga koja svira kao iz radija u autu: prigušena dok su vrata zatvorena, otvorena dok su otvorena, a punim zvukom svira na kartici. Izbornik je na engleskom, sve ostalo na njemačkom.
+
+Datoteke: `score-gta.js`, `song-gta.js`, `index-gta.html`, `src/film-gta.js`, `src/world-gta.js`, `src/hud-gta.js`, `src/font-gta.js`. Fontovi su UnifrakturMaguntia i Michroma (OFL, Fontsource). Lik, auto, scena i HUD nacrtani su kodom; ne koriste se logo, fontovi, modeli ni glazba iz igre.
+
+**Za drugu utakmicu** mijenja se samo blok `MATCH` u `score-gta.js` (domaći i gostujući klub, grbovi, datum, vrijeme, adresa).
+
+```bash
+node song-gta.js                       # -> out/music-gta.wav
+node render.js --film gta --preview    # kontakt-list
+node render.js --film gta              # -> out/ksv-gta-reel.mp4
 ```
 
 ## Pokretanje
